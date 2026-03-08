@@ -1,8 +1,7 @@
-from langchain.agents import create_agent
-from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from langgraph.graph.state import CompiledStateGraph
 
+from lessons.rag.retrieve import context
 from src.settings import settings
 
 llm = ChatOpenAI(
@@ -13,17 +12,18 @@ llm = ChatOpenAI(
     base_url="https://api.proxyapi.ru/openai/v1"
 )
 
+prompt_template = ChatPromptTemplate([
+    ("system", "Ты — полезный помощник. Используй следующий контекст, чтобы ответить на вопрос. "
+               "Если ответа нет в контексте — скажи об этом.\n\nКонтекст:\n {context}"),
+    ("user", "{question}")
+])
 
-@tool
-def add(x: int, y: int):
-    """Add two numbers together."""
-    return x + y
+chain = prompt_template | llm
 
+question = "Как общается Зир'фан?"
 
-async def make_graph() -> CompiledStateGraph:
-    graph = create_agent(llm, tools=[add])
-    return graph
-
-
-if __name__ == '__main__':
-    print(llm.invoke('Hello world'))
+response = chain.invoke({
+    "question": question,
+    "context": context,
+})
+print(response.content)
